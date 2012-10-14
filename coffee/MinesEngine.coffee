@@ -1,4 +1,4 @@
-class MinesEngine
+class MinesEngine extends EventObject
   
   'use strict'
   
@@ -12,7 +12,7 @@ class MinesEngine
   
   
   constructor: (width, height, bombRatio) ->
-    @eventListeners = {}
+    super()
     
     # Board is 1-dim array, layout is rows after each other
     board = ( { mark: MinesEngine.UNKNOWN } for [0...(width * height)] )
@@ -88,11 +88,6 @@ class MinesEngine
     @forAllData = (callback) -> callback getCell(x, y).data for x in [0...width] for y in [0...height]; return
     
     return
-  
-  
-  on: (eventName, listener) -> (@eventListeners[eventName] ?= []).push listener; @
-  
-  fire: (eventName, data...) -> listener.apply null, data for listener in @eventListeners[eventName] ? []; @
       
 
 
