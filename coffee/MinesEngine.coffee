@@ -12,15 +12,8 @@ class MinesEngine
     @eventListeners = {}
   
   createBoard: (width, height, bombRatio) ->
-    # Board is 2-dim array, rows in top level, cols per row
-    board = (
-      (
-        {
-          #bomb: if col is firstX and row is firstY then off else randBool bombRatio
-          mark: MinesEngine.UNKNOWN
-        } for col in [0...width]
-      ) for row in [0...height]
-    )
+    # Board is 1-dim array, layout is rows after each other
+    board = ( { mark: MinesEngine.UNKNOWN } for [0...(width * height)] )
     
     @totalBombs = remainingNonBombs = startTime = timer = timerId = null
     
@@ -29,7 +22,7 @@ class MinesEngine
     init = (x, y) ->
       @totalBombs = 0
       for row in [0...height] then for col in [0...width]
-        board[row][col].bomb = b = if col is x and row is y then off else randBool bombRatio
+        board[row * width + col].bomb = b = if col is x and row is y then off else randBool bombRatio
         @totalBombs++ if b
       
       remainingNonBombs = width * height - @totalBombs
@@ -49,13 +42,13 @@ class MinesEngine
     
     getCell = (x, y) ->
       throw new Error("Invalid cell: (#{x}, #{y})") if x < 0 or y < 0 or x >= width or y >= height
-      board[y][x]
+      board[y * width + x]
     
     countNeighborBombs = (x, y) ->
       bombs = 0
       for row in [(y-1)..(y+1)]
         for col in [(x-1)..(x+1)]
-          bombs++ if 0 <= row < height and 0 <= col < width and (row isnt y or col isnt x) and board[row][col].bomb
+          bombs++ if 0 <= row < height and 0 <= col < width and (row isnt y or col isnt x) and board[row * width + col].bomb
       bombs
     
     @select = (x, y) ->
