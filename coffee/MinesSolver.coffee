@@ -15,6 +15,13 @@ class MinesSolver extends EventObject
     
     toString: -> "Cell(#{@x}, #{@y})"
     
+    formatPrintString: ->
+      switch m = @getMark()
+        when MinesEngine.MARKED then 'X'
+        when MinesEngine.UNKNOWN then '~'
+        when 0 then '_'
+        else "#{m}"
+    
     init: (callback) ->
       @getMark()
       @neighbors = []
@@ -23,53 +30,84 @@ class MinesSolver extends EventObject
           @neighbors.push if i is @x and j is @y then null else callback i, j
       return
     
-    evalMark: (@mark) ->
-      @remaining = mark if mark >= 0 and not @remaining?
-      mark
-    
-    getMark: -> @mark ? @evalMark @engine.getMark @x, @y
+    getMark: -> @mark ?= @engine.getMark @x, @y
     
     markCell: ->
       return unless @engine.isRunning()
-      # TODO
-      console.log "Marking #{@}"
-      return
+      #console.log "Marking #{@}"
+      @engine.mark @x, @y, yes
     
-    onMarked: (marked) ->
-      console.log "Event: Marked #{@} #{marked}"
+    onMarked: ->
+      marked = @isMarked()
+      
+      # Get fresh mark from engine
+      delete @mark
+      m = @isMarked()
+      #console.log "Event: Marked #{@}: #{marked} -> #{m}"
+      
+      if marked isnt m
+        # Decrease (or increase) remaining bombs of neighbors
+        @withNeighbors (cell) ->
+          if cell.remaining?
+            if m then cell.remaining-- else cell.remaining++
+            #console.log "Adjusted remaining of #{cell} to #{cell.remaining}"
       return
     
     select: ->
       return unless @engine.isRunning()
-      @evalMark @engine.select @x, @y
+      @engine.select @x, @y
     
     onSelected: (bombCount) ->
-      #console.log "Event: Selected #{@}, bomb count is #{bombCount}"
+      @mark = bombCount
+      @remaining = bombCount - @countMarkedNeighbors()
+      #console.log "Event: Selected #{@}, mark=#{@mark}, remaining=#{@remaining}"
       return
     
     withNeighbors: (callback) ->
       callback cell for cell in @neighbors when cell?
       return
+      
+    isUnknown: -> @getMark() is MinesEngine.UNKNOWN
+    isMarked: -> @getMark() is MinesEngine.MARKED
     
     withUnknownNeighbors: (callback) ->
-      @withNeighbors (cell) -> callback cell if cell.getMark() is MinesEngine.UNKNOWN
+      @withNeighbors (cell) -> callback cell if cell.isUnknown()
     
     countUnknownNeighbors: ->
       n = 0
       @withUnknownNeighbors -> n++
       n
     
+    withMarkedNeighbors: (callback) ->
+      @withNeighbors (cell) -> callback cell if cell.isMarked()
+    
+    countMarkedNeighbors: ->
+      n = 0
+      @withMarkedNeighbors -> n++
+      n
+    
     
     solveTrivial: ->
       result = no
       
-      if @remaining? and not @done
+      if @remaining?
+        
         # Release unknown neighbors if no more bombs expected
         if @remaining is 0
           #console.log "Releasing neighbors of #{@}"
           @withUnknownNeighbors (cell) -> cell.select()
           #console.log "Released neighbors of #{@}"
-          @done = yes
+
+          delete @remaining
+          result = yes
+        
+        # Mark unknown neighbors if their count matches the count of remaining bombs
+        else if @remaining is @countUnknownNeighbors()
+          #console.log "Marking neighbors of #{@}"
+          @withUnknownNeighbors (cell) -> cell.markCell()
+          #console.log "Marked neighbors of #{@}"
+
+          delete @remaining
           result = yes
       
       result
@@ -91,6 +129,9 @@ class MinesSolver extends EventObject
     
     # Forward events to cells
     engine
+    .on 'init', (totalBombs) ->
+      console.log "Game init: total bombs=#{totalBombs}"
+    
     .on 'selected', (x, y, _, bombCount) ->
       getCell(x, y).onSelected(bombCount)
     
@@ -100,30 +141,48 @@ class MinesSolver extends EventObject
     .on 'bomb', (x, y, _) ->
       console.log "Hit bomb at #{getCell(x, y)}"
     
-    .on 'finished', (won, time) ->
+    .on 'finished', (won, time) =>
       console.log "Game finished after #{time}: won=#{won}"
+      @run = no
+    
+    @run = yes
   
   
   solve: ->
-    run = yes
-    rounds = 5
+    run = @run
+    rounds = 50
     
+    @printBoard 'Starting solve'
+      
     while run
       run = no
       if --rounds < 0
-        console.log "Rounds over!"
+        console.log "Solve: Rounds over!"
         break
       
-      console.log "Trying trivial solve"
-      run = cell.solveTrivial() or run for cell in @board
+      #console.log "Trying trivial solve"
+      run = cell.solveTrivial() or run for cell in @board when @run
       
-      unless run
-        # Nothing trivially solved, try one
-        # TODO remove
-        run = @tryNextCell()
+      @printBoard 'After trivial solve'
     
-    console.log "Finished solving, had #{if rounds < 0 then 'no' else rounds} rounds left"
+    @printBoard "Finished solving, had #{if rounds < 0 then 'no' else rounds} rounds left"
       
+    return
+  
+  
+  autoSolve: ->
+    rounds = 10
+    
+    while @run
+      if --rounds < 0
+        console.log "AutoSolve: Rounds over!"
+        break
+      
+      console.log "Next auto-solve round"
+      
+      break unless @tryNextCell()
+      @solve()
+    
     return
   
   
@@ -132,7 +191,7 @@ class MinesSolver extends EventObject
     result = no
     tryCell = null
     for cell in @board
-      if cell.getMark() is MinesEngine.UNKNOWN
+      if cell.isUnknown()
         console.log "  Try #{cell}"
         tryCell = cell
         break
@@ -150,6 +209,18 @@ class MinesSolver extends EventObject
       console.log "No next try cell found"
     
     result
+  
+  
+  printBoard: (msg) ->
+    console.log "#{msg}:"
+    B = @engine.width - 1
+    s = ''
+    @board.forEach (cell) ->
+      s += " #{cell.formatPrintString()}"
+      if cell.x is B
+        console.log s
+        s = ''
+    return
 
 
 

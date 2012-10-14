@@ -16,6 +16,9 @@ class MinesEngine extends EventObject
   
   
   constructor: (@width, @height, bombRatio) ->
+    throw new Error("Positive dimension required") if width <= 0 or height <= 0
+    throw new Error("Bomb ratio must be between 0 and 1") unless 0 <= bombRatio <= 1
+    
     super()
     
     # Board is 1-dim array, layout is rows after each other
