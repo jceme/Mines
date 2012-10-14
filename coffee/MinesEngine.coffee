@@ -15,7 +15,7 @@ class MinesEngine extends EventObject
   @MARKED: -2
   
   
-  constructor: (@width, @height, bombRatio) ->
+  constructor: (@width, @height, bombRatio, @opts = {}) ->
     throw new Error("Positive dimension required") if width <= 0 or height <= 0
     throw new Error("Bomb ratio must be between 0 and 1") unless 0 <= bombRatio <= 1
     
@@ -36,13 +36,14 @@ class MinesEngine extends EventObject
       @fire 'init', @totalBombs
       
       timer = 0
-      timerId = setInterval (=> @fire 'timer', ++timer), 1000
+      unless @opts.noTimer
+        timerId = setInterval (=> @fire 'timer', ++timer), 1000
       startTime = now()
       
       init = null
     
     @destroy = ->
-      clearInterval timerId
+      clearInterval timerId if timerId?
       board = null
     
     finish = (won, x, y, data) ->

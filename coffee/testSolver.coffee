@@ -2,15 +2,13 @@ MinesEngine = require('./MinesEngine')
 MinesSolver = require('./MinesSolver')
 
 
-won = time = null
-
-engine = new MinesEngine(80, 20, 0.101)
-engine.on 'finished', (_won, _time) -> won = _won; time = _time
+engine = new MinesEngine 80, 20, 0.101,
+  noTimer: on
 
 solver = new MinesSolver(engine)
-solver.autoSolve()
+result = solver.autoSolve()
 
-console.log "Finished auto-solving"
+console.log "Finished auto-solving: #{JSON.stringify result}"
 engine.destroy()
 
-console.log "YOU #{if won then 'WON' else 'LOST'} THE GAME AFTER #{time} seconds."
+console.log "YOU #{if result.won then 'WON' else 'LOST'} THE GAME AFTER #{result.time} seconds."

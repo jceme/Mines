@@ -67,7 +67,7 @@ class MinesSolver extends EventObject
       return
     
     onBomb: ->
-      console.log "Hit bomb at #{@}"
+      #console.log "Hit bomb at #{@}"
       @mark = Cell.BOMB
       return
     
@@ -122,8 +122,13 @@ class MinesSolver extends EventObject
   
   
   
-  constructor: (engine) ->
+  constructor: (engine, @opts = {}) ->
     super()
+    
+    @opts.roundsSolver ?= Number.MAX_VALUE
+    @opts.roundsAutoSolver ?= Number.MAX_VALUE
+    @opts.printBoards ?= no
+    
     
     # Init local board
     @board = board = ( new Cell(engine, i % w, Math.floor i / w) for i in [0...((@boardWidth = w = engine.width) * (h = engine.height))] )
@@ -137,8 +142,9 @@ class MinesSolver extends EventObject
     
     # Forward events to cells
     engine
-    .on 'init', (totalBombs) ->
-      console.log "Game init: total bombs=#{totalBombs}"
+    .on 'init', (@totalBombs) =>
+      #console.log "Game init: total bombs=#{totalBombs}"
+      return
     
     .on 'selected', (x, y, _, bombCount) ->
       getCell(x, y).onSelected(bombCount)
@@ -150,7 +156,9 @@ class MinesSolver extends EventObject
       getCell(x, y).onBomb()
     
     .on 'finished', (won, time) =>
-      console.log "Game finished after #{time}: won=#{won}"
+      @statsWon = won
+      @statsTime = time
+      #console.log "Game finished after #{time}: won=#{won}"
       @run = no
     
     @run = yes
@@ -158,48 +166,63 @@ class MinesSolver extends EventObject
   
   solve: ->
     run = @run
-    rounds = 50
+    rounds = @opts.roundsSolver
     @counterSolve ?= 0
     
     @printBoard 'Starting solve'
+    @fire 'solveStarting'
       
     while run
       run = no
       if --rounds < 0
-        console.log "Solve: Rounds over!"
+        #console.log "Solve: Rounds over!"
+        @fire 'solveRoundBreak', @counterSolve
         break
       
       @counterSolve++
+      @fire 'solveNextRound', @counterSolve
       
       #console.log "Trying trivial solve"
       run = cell.solveTrivial() or run for cell in @board when @run
       
       @printBoard 'After trivial solve'
+      @fire 'solveTrivialFinished'
     
     @printBoard "Finished solving, had #{if rounds < 0 then 'no' else rounds} rounds left"
+    @fire 'solveFinished', @counterSolve
       
     return
   
   
   autoSolve: ->
-    rounds = 10
-    @counterAutoSolve ?= 0
+    rounds = @opts.roundsAutoSolver
+    @counterAutoSolve = @counterSolve = 0
+
+    @fire 'autoSolveStarting'
     
     while @run
       if --rounds < 0
         console.log "AutoSolve: Rounds over!"
+        @fire 'autoSolveRoundBreak', @counterAutoSolve, @counterSolve
         break
       
-      console.log "Next auto-solve round"
+      #console.log "Next auto-solve round"
       @counterAutoSolve++
+      @fire 'autoSolveNextRound', @counterAutoSolve, @counterSolve
       
       break unless @tryNextCell()
       @solve()
     
-    console.log "Auto-solve complete: #solve=#{@counterSolve} #autoSolve=#{@counterAutoSolve}"
+    #console.log "Auto-solve complete: #solve=#{@counterSolve} #autoSolve=#{@counterAutoSolve}"
     @printBoard 'Final board'
+    @fire 'solveFinished', @counterAutoSolve, @counterSolve
     
-    return
+    {
+      won: @statsWon
+      time: @statsTime
+      solves: @counterSolve
+      autoSolves: @counterAutoSolve
+    }
   
   
   tryNextCell: ->
@@ -215,21 +238,26 @@ class MinesSolver extends EventObject
           break if n >= 8
     
     if tryCell
+      @fire 'tryNextCell', tryCell
       n = tryCell.select()
-      console.log "Selected #{tryCell} -> #{n}"
+      #console.log "Selected #{tryCell} -> #{n}"
 
       if n is no
-        console.log "Hit bomb when trying #{tryCell}"
+        #console.log "Hit bomb when trying #{tryCell}"
+        ''
       else
         result = yes
 
     else
-      console.log "No next try cell found"
+     @fire 'tryNextCellFailed'
+     #console.log "No next try cell found"
     
     result
   
   
   printBoard: (msg) ->
+    return unless @opts.printBoards
+    
     console.log "#{msg}:"
     B = @boardWidth - 1
     s = ''
