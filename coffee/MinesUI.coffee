@@ -4,8 +4,7 @@ table.appendTo '#board'
 rows = cols = 10
 ratio = 0.1
 
-engine = new MinesEngine()
-engine.createBoard rows, cols, ratio
+engine = new MinesEngine rows, cols, ratio
 
 disableAll = ->
   engine.forAllData (c) -> c.button

@@ -3,21 +3,21 @@ class MinesEngine
   'use strict'
   
   randBool = (ratio) -> Math.random() < ratio
+    
+  now = -> (new Date()).getTime()
   
   
   @UNKNOWN: -1
   @MARKED: -2
   
-  constructor: ->
-    @eventListeners = {}
   
-  createBoard: (width, height, bombRatio) ->
+  constructor: (width, height, bombRatio) ->
+    @eventListeners = {}
+    
     # Board is 1-dim array, layout is rows after each other
     board = ( { mark: MinesEngine.UNKNOWN } for [0...(width * height)] )
     
     @totalBombs = remainingNonBombs = startTime = timer = timerId = null
-    
-    now = -> (new Date()).getTime()
     
     init = (x, y) ->
       @totalBombs = 0
