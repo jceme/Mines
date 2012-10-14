@@ -1,3 +1,7 @@
+EventObject = require?('./EventObject')
+EventObject ?= (-> @)().EventObject
+
+
 class MinesEngine extends EventObject
   
   'use strict'
@@ -11,7 +15,7 @@ class MinesEngine extends EventObject
   @MARKED: -2
   
   
-  constructor: (width, height, bombRatio) ->
+  constructor: (@width, @height, bombRatio) ->
     super()
     
     # Board is 1-dim array, layout is rows after each other
@@ -34,13 +38,19 @@ class MinesEngine extends EventObject
       
       init = null
     
-    finish = (won, x, y, data) ->
-      time = (now() - startTime) / 1000
+    @destroy = ->
       clearInterval timerId
-      @fire 'finished', won, time, x, y, data
       board = null
     
+    finish = (won, x, y, data) ->
+      time = (now() - startTime) / 1000
+      @fire 'finished', won, time, x, y, data
+      @destroy()
+    
+    @isRunning = -> board?
+    
     getCell = (x, y) ->
+      throw new Error("Game is already over") unless board
       throw new Error("Invalid cell: (#{x}, #{y})") if x < 0 or y < 0 or x >= width or y >= height
       board[y * width + x]
     
@@ -81,7 +91,9 @@ class MinesEngine extends EventObject
       @fire 'marked', x, y, cell.data, m
       m
     
-    @isUnknown = (x, y) -> getCell(x, y).mark is MinesEngine.UNKNOWN
+    @getMark = (x, y) -> getCell(x, y).mark
+    
+    @isUnknown = (x, y) -> getMark(x, y) is MinesEngine.UNKNOWN
     
     @setData = (x, y, data) -> getCell(x, y).data = data
     @getData = (x, y) -> getCell(x, y).data
