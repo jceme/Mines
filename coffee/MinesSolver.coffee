@@ -11,12 +11,15 @@ class MinesSolver extends EventObject
   
   class Cell extends EventObject
     
+    @BOMB = -100
+    
     constructor: (@engine, @x, @y) -> super()
     
     toString: -> "Cell(#{@x}, #{@y})"
     
     formatPrintString: ->
       switch m = @getMark()
+        when Cell.BOMB then 'B'
         when MinesEngine.MARKED then 'X'
         when MinesEngine.UNKNOWN then '~'
         when 0 then '_'
@@ -61,6 +64,11 @@ class MinesSolver extends EventObject
       @mark = bombCount
       @remaining = bombCount - @countMarkedNeighbors()
       #console.log "Event: Selected #{@}, mark=#{@mark}, remaining=#{@remaining}"
+      return
+    
+    onBomb: ->
+      console.log "Hit bomb at #{@}"
+      @mark = Cell.BOMB
       return
     
     withNeighbors: (callback) ->
@@ -114,11 +122,11 @@ class MinesSolver extends EventObject
   
   
   
-  constructor: (@engine) ->
+  constructor: (engine) ->
     super()
     
     # Init local board
-    @board = board = ( new Cell(engine, i % w, Math.floor i / w) for i in [0...((w = engine.width) * (h = engine.height))] )
+    @board = board = ( new Cell(engine, i % w, Math.floor i / w) for i in [0...((@boardWidth = w = engine.width) * (h = engine.height))] )
     
     getCell = (x, y) -> board[y * w + x]
     
@@ -139,7 +147,7 @@ class MinesSolver extends EventObject
       getCell(x, y).onMarked(marked)
     
     .on 'bomb', (x, y, _) ->
-      console.log "Hit bomb at #{getCell(x, y)}"
+      getCell(x, y).onBomb()
     
     .on 'finished', (won, time) =>
       console.log "Game finished after #{time}: won=#{won}"
@@ -151,6 +159,7 @@ class MinesSolver extends EventObject
   solve: ->
     run = @run
     rounds = 50
+    @counterSolve ?= 0
     
     @printBoard 'Starting solve'
       
@@ -159,6 +168,8 @@ class MinesSolver extends EventObject
       if --rounds < 0
         console.log "Solve: Rounds over!"
         break
+      
+      @counterSolve++
       
       #console.log "Trying trivial solve"
       run = cell.solveTrivial() or run for cell in @board when @run
@@ -172,6 +183,7 @@ class MinesSolver extends EventObject
   
   autoSolve: ->
     rounds = 10
+    @counterAutoSolve ?= 0
     
     while @run
       if --rounds < 0
@@ -179,9 +191,13 @@ class MinesSolver extends EventObject
         break
       
       console.log "Next auto-solve round"
+      @counterAutoSolve++
       
       break unless @tryNextCell()
       @solve()
+    
+    console.log "Auto-solve complete: #solve=#{@counterSolve} #autoSolve=#{@counterAutoSolve}"
+    @printBoard 'Final board'
     
     return
   
@@ -189,19 +205,21 @@ class MinesSolver extends EventObject
   tryNextCell: ->
     # TODO use smart try
     result = no
-    tryCell = null
+    tryCell = n = null
     for cell in @board
       if cell.isUnknown()
-        console.log "  Try #{cell}"
-        tryCell = cell
-        break
+        if not tryCell or cell.countUnknownNeighbors() > n
+          #console.log "  Try #{cell}"
+          tryCell = cell
+          n = cell.countUnknownNeighbors()
+          break if n >= 8
     
     if tryCell
       n = tryCell.select()
-      console.log "Selected #{cell} -> #{n}"
+      console.log "Selected #{tryCell} -> #{n}"
 
       if n is no
-        console.log "Hit bomb when trying #{cell}"
+        console.log "Hit bomb when trying #{tryCell}"
       else
         result = yes
 
@@ -213,7 +231,7 @@ class MinesSolver extends EventObject
   
   printBoard: (msg) ->
     console.log "#{msg}:"
-    B = @engine.width - 1
+    B = @boardWidth - 1
     s = ''
     @board.forEach (cell) ->
       s += " #{cell.formatPrintString()}"
