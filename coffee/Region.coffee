@@ -41,7 +41,7 @@ define ['Logging'],
     if @min < 0 or @max > @members.length
       throw new Error("Region: min..max must be between 0..#{@members.length}: #{@min}..#{@max}")
   
-  toString: -> "Region[min=#{@min}, max=#{@max}, members=#{JSON.stringify @members}, special=#{if @isBombFree() then 'FREE' else if @isBombRegion() then 'BOMB' else 'no'}]"
+  toString: -> "Region[min=#{@min}, max=#{@max}, members=#{@members.length}]"
   
   @INTERSECTION_NONE      = 0  # Regions do not intersect
   @INTERSECTION_REAL      = 1  # Regions do really overlap
@@ -92,17 +92,17 @@ define ['Logging'],
           (if mem.indexOf(m) < 0 then lmem else imem).push m
         
         rmem = mem.filter (m) -> imem.indexOf(m) < 0
-        #console.log "     mem split: l=#{lmem} and i=#{imem} and r=#{rmem}"
+        log.debug '     mem split: l={} and i={} and r={}', lmem, imem, rmem
         
         [lmin, lmax,   ilmin, ilmax] = calcSplitMinMax(@min, @max, lmem.length, imem.length)
         [irmin, irmax,   rmin, rmax] = calcSplitMinMax(region.min, region.max, imem.length, rmem.length)
-        #console.log "     calc range l: l=#{lmin}-#{lmax} and il=#{ilmin}-#{ilmax}"
-        #console.log "     calc range r: ir=#{irmin}-#{irmax} and r=#{rmin}-#{rmax}"
+        log.debug '     calc range l: l={}-{} and il={}-{}', lmin, lmax, ilmin, ilmax
+        log.debug '     calc range r: ir={}-{} and r={}-{}', irmin, irmax, rmin, rmax
         
         # Merge intersection range
         imin = Max ilmin, irmin
         imax = Min ilmax, irmax
-        #console.log "     merged i: #{imin}-#{imax}"
+        log.debug '     merged i: {}-{}', imin, imax
         
         # Adjust outer region parts due to range change
         _lmin = lmin + ilmax - imax
@@ -110,8 +110,8 @@ define ['Logging'],
         
         _rmin = rmin + irmax - imax
         _rmax = rmax + irmin - imin
-        #console.log "     adjust ranges l: #{lmin}-#{lmax} ==> #{_lmin}-#{_lmax}"
-        #console.log "     adjust ranges r: #{rmin}-#{rmax} ==> #{_rmin}-#{_rmax}"
+        log.debug '     adjust ranges l: {}-{} ==> {}-{}', lmin, lmax, _lmin, _lmax
+        log.debug '     adjust ranges r: {}-{} ==> {}-{}', rmin, rmax, _rmin, _rmax
         
         [
           new Region(lmem, _lmin, _lmax)
@@ -127,20 +127,20 @@ define ['Logging'],
         # Split my region into my region (only) part and region part
         regmem = region.members
         mymem = @members.filter (m) -> regmem.indexOf(m) < 0
-        #console.log "     mem split: my=#{mymem} and region=#{regmem}"
+        log.debug '     mem split: my={} and region={}', mymem, regmem
         
         [mymin, mymax,   regmin, regmax] = calcSplitMinMax(@min, @max, mymem.length, regmem.length)
-        #console.log "     calc range: my=#{mymin}-#{mymax} and region=#{regmin}-#{regmax}"
+        log.debug '     calc range: my={}-{} and region={}-{}', mymin, mymax, regmin, regmax
         
         # Narrow calculated region range by region's original range
         _regmin = Max regmin, region.min
         _regmax = Min regmax, region.max
-        #console.log "     narrow region range: #{regmin}-#{regmax} ==> #{_regmin}-#{_regmax}"
+        log.debug '     narrow region range: {}-{} ==> {}-{}', regmin, regmax, _regmin, _regmax
         
         # Adjust my region part due to range change
         _mymin = mymin + regmax - _regmax
         _mymax = mymax + regmin - _regmin
-        #console.log "     adjust my range: #{mymin}-#{mymax} ==> #{_mymin}-#{_mymax}"
+        log.debug '     adjust my range: {}-{} ==> {}-{}', mymin, mymax, _mymin, _mymax
         
         [
           new Region(mymem, _mymin, _mymax)

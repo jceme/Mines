@@ -3,6 +3,8 @@ define ['Logging', 'cs!EventObject'],
   
   'use strict'
   
+  log = new Log 'Cell'
+  
   @BOMB = -100
   
   constructor: (@engine, @x, @y) -> super()
@@ -29,7 +31,7 @@ define ['Logging', 'cs!EventObject'],
   
   markCell: ->
     return unless @engine.isRunning()
-    #console.log "Marking #{@}"
+    log.debug 'Marking {}', @
     @engine.mark @x, @y, yes
   
   onMarked: ->
@@ -38,14 +40,14 @@ define ['Logging', 'cs!EventObject'],
     # Get fresh mark from engine
     delete @mark
     m = @isMarked()
-    #console.log "Event: Marked #{@}: #{marked} -> #{m}"
+    log.debug 'Event: Marked {}: {} -> {}', @, marked, m
     
     if marked isnt m
       # Decrease (or increase) remaining bombs of neighbors
       @withNeighbors (cell) ->
         if cell.remaining?
           if m then cell.remaining-- else cell.remaining++
-          #console.log "Adjusted remaining of #{cell} to #{cell.remaining}"
+          log.debug 'Adjusted remaining of {} to {}', cell, cell.remaining
     return
   
   select: ->
@@ -55,11 +57,11 @@ define ['Logging', 'cs!EventObject'],
   onSelected: (bombCount) ->
     @mark = bombCount
     @remaining = bombCount - @countMarkedNeighbors()
-    #console.log "Event: Selected #{@}, mark=#{@mark}, remaining=#{@remaining}"
+    log.debug 'Event: Selected {}, mark={}, remaining={}', @, @mark, @remaining
     return
   
   onBomb: ->
-    #console.log "Hit bomb at #{@}"
+    log.info 'Hit bomb at {}', @
     @mark = Cell.BOMB
     return
   
@@ -99,18 +101,18 @@ define ['Logging', 'cs!EventObject'],
       
       # Release unknown neighbors if no more bombs expected
       if @remaining is 0
-        #console.log "Releasing neighbors of #{@}"
+        log.trace 'Releasing neighbors of {}', @
         @withUnknownNeighbors (cell) -> cell.select()
-        #console.log "Released neighbors of #{@}"
+        log.trace 'Released neighbors of {}', @
 
         delete @remaining
         result = yes
       
       # Mark unknown neighbors if their count matches the count of remaining bombs
       else if @remaining is @countUnknownNeighbors()
-        #console.log "Marking neighbors of #{@}"
+        log.trace 'Marking neighbors of {}', @
         @withUnknownNeighbors (cell) -> cell.markCell()
-        #console.log "Marked neighbors of #{@}"
+        log.trace 'Marked neighbors of {}', @
 
         delete @remaining
         result = yes
