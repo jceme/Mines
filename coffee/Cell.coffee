@@ -1,5 +1,5 @@
-define ['Logging', 'cs!EventObject'],
-(Log, EventObject) -> class Cell extends EventObject
+define ['Logging', 'cs!EventObject', 'cs!MinesEngine'],
+(Log, EventObject, MinesEngine) -> class Cell extends EventObject
   
   'use strict'
   

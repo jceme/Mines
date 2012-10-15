@@ -1,7 +1,10 @@
-define ['cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
-(EventObject, MinesEngine, Region, Cell) -> class MinesSolver extends EventObject
+define ['Logging', 'cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
+(Log, EventObject, MinesEngine, Region, Cell) -> class MinesSolver extends EventObject
   
   'use strict'
+  
+  log = new Log 'MinesSolver'
+  
   
   constructor: (engine, @opts = {}) ->
     super()
@@ -24,8 +27,7 @@ define ['cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
     # Forward events to cells
     engine
     .on 'init', (@totalBombs) =>
-      #console.log "Game init: total bombs=#{totalBombs}"
-      return
+      log.info 'Game init: total bombs={}', totalBombs
     
     .on 'selected', (x, y, _, bombCount) ->
       getCell(x, y).onSelected(bombCount)
@@ -39,8 +41,8 @@ define ['cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
     .on 'finished', (won, time) =>
       @statsWon = won
       @statsTime = time
-      #console.log "Game finished after #{time}: won=#{won}"
       @run = no
+      log.info 'Game finished after {}: won={}', time, won
     
     @run = yes
   
@@ -56,14 +58,14 @@ define ['cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
     while run
       run = no
       if --rounds < 0
-        #console.log "Solve: Rounds over!"
+        log.debug 'Solve: Rounds over!'
         @fire 'solveRoundBreak', @counterSolve
         break
       
       @counterSolve++
       @fire 'solveNextRound', @counterSolve
       
-      #console.log "Trying trivial solve"
+      log.debug 'Trying trivial solve'
       run = cell.solveTrivial() or run for cell in @board when @run
       
       @printBoard 'After trivial solve'
@@ -87,14 +89,14 @@ define ['cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
         @fire 'autoSolveRoundBreak', @counterAutoSolve, @counterSolve
         break
       
-      #console.log "Next auto-solve round"
+      log.debug 'Next auto-solve round'
       @counterAutoSolve++
       @fire 'autoSolveNextRound', @counterAutoSolve, @counterSolve
       
       break unless @tryNextCell()
       @solve()
     
-    #console.log "Auto-solve complete: #solve=#{@counterSolve} #autoSolve=#{@counterAutoSolve}"
+    log.info 'Auto-solve complete: #solve={}, #autoSolve={}', @counterSolve, @counterAutoSolve
     @printBoard 'Final board'
     @fire 'solveFinished', @counterAutoSolve, @counterSolve
     
@@ -113,7 +115,8 @@ define ['cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
     for cell in @board
       if cell.isUnknown()
         if not tryCell or cell.countUnknownNeighbors() > n
-          #console.log "  Try #{cell}"
+          log.trace '  Try next and better {}', cell
+          #console.log ""
           tryCell = cell
           n = cell.countUnknownNeighbors()
           break if n >= 8
@@ -121,17 +124,16 @@ define ['cs!EventObject', 'cs!MinesEngine', 'cs!Region', 'cs!Cell'],
     if tryCell
       @fire 'tryNextCell', tryCell
       n = tryCell.select()
-      #console.log "Selected #{tryCell} -> #{n}"
+      log.debug 'Selected {} -> {}', tryCell, n
 
       if n is no
-        #console.log "Hit bomb when trying #{tryCell}"
-        ''
+        log.info 'Hit bomb when trying {}', tryCell
       else
         result = yes
 
     else
      @fire 'tryNextCellFailed'
-     #console.log "No next try cell found"
+     log.warn 'No next try cell found'
     
     result
   
