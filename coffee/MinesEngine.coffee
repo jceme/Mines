@@ -1,8 +1,4 @@
-EventObject = require?('./EventObject')
-EventObject ?= (-> @)().EventObject
-
-
-class MinesEngine extends EventObject
+define ['cs!EventObject'], (EventObject) -> class MinesEngine extends EventObject
   
   'use strict'
   
@@ -104,12 +100,3 @@ class MinesEngine extends EventObject
     @forAllData = (callback) -> callback getCell(x, y).data for x in [0...width] for y in [0...height]; return
     
     return
-      
-
-
-
-
-if module?.exports?
-  module.exports = MinesEngine
-else
-  (-> @)().MinesEngine = MinesEngine

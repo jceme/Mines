@@ -1,0 +1,26 @@
+{
+  "name": "Mines",
+  "version": "1.0.0",
+  "description": "Engine and Solver for the Mines games",
+  "__main": "js/Log.js",
+  "dependencies": {
+  	"requirejs": "2.1.x",
+  	"require-cs": "git://github.com/jrburke/require-cs",
+    "Logging": "git://github.com/jceme/Logging.git"
+  },
+  "devDependencies": {
+    "coffee-script": "1.3.x"
+  },
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/jceme/Mines.git"
+  },
+  "keywords": [
+    "mines",
+    "solver"
+  ],
+  "author": "Daniel",
+  "license": "GPL"
+}

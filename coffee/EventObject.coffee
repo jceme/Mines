@@ -1,4 +1,4 @@
-class EventObject
+define [], -> class EventObject
   
   'use strict'
   
@@ -20,12 +20,3 @@ class EventObject
   fire: (eventName, data...) ->
     listener.apply null, data for listener in @_eventListeners[eventName] ? []
     @
-      
-
-
-
-
-if module?.exports?
-  module.exports = EventObject
-else
-  (-> @)().EventObject = EventObject

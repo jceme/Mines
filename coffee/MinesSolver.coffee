@@ -1,11 +1,4 @@
-EventObject = require?('./EventObject')
-EventObject ?= (-> @)().EventObject
-
-MinesEngine = require?('./MinesEngine')
-MinesEngine ?= (-> @)().MinesEngine
-
-
-class MinesSolver extends EventObject
+define ['cs!EventObject', 'cs!MinesEngine'], (EventObject, MinesEngine) -> class MinesSolver extends EventObject
   
   'use strict'
   
@@ -424,11 +417,3 @@ class MinesSolver extends EventObject
         console.log s
         s = ''
     return
-
-
-
-
-if module?.exports?
-  module.exports = MinesSolver
-else
-  (-> @)().MinesSolver = MinesSolver
